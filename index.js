@@ -1,6 +1,7 @@
 const express = require("express");
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require("@whiskeysockets/baileys");
 const P = require("pino");
+const qrcode = require("qrcode-terminal");
 
 const app = express();
 app.use(express.json());
@@ -21,10 +22,15 @@ async function startBot() {
     sock.ev.on("creds.update", saveCreds);
 
     sock.ev.on("connection.update", (update) => {
-        const { connection, lastDisconnect } = update;
+        const { connection, qr, lastDisconnect } = update;
+
+        if (qr) {
+            console.log("📱 SCAN THIS QR:");
+            qrcode.generate(qr, { small: true });
+        }
 
         if (connection === "open") {
-            console.log("✅ BOT ONLINE (CLOUD)");
+            console.log("✅ BOT CONNECTED SUCCESSFULLY");
         }
 
         if (connection === "close") {
@@ -40,21 +46,7 @@ async function startBot() {
     });
 }
 
-// 🌐 API (for future dashboard)
-app.post("/send", async (req, res) => {
-    try {
-        const { number, message } = req.body;
-
-        await sockGlobal.sendMessage(number + "@s.whatsapp.net", {
-            text: message
-        });
-
-        res.json({ success: true });
-    } catch (err) {
-        res.json({ success: false, error: err.message });
-    }
-});
-
+// simple API route
 app.get("/", (req, res) => {
     res.send("🤖 XMAN Cloud Bot Running");
 });
